@@ -84,8 +84,6 @@ class Scene:
       pygame.display.flip()
   
   def render_ui(self):
-    frames = "{}fps".format(round(self.clock.get_fps()))
-    fps = self.font.render(frames, True, (0, 0, 0))
-    self.screen.blit(fps, (0, 0))
-    currDay = self.font.render("Day: {}".format(self.day), True, (0, 0, 0))
-    self.screen.blit(currDay, (50, 0))
+    ui_info = f'{round(self.clock.get_fps())}fps Day: {self.day} Population: {len(self.sprites)}'
+    ui_font = self.font.render(ui_info, True, (0, 0, 0))
+    self.screen.blit(ui_font, (0, 0))
