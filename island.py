@@ -25,32 +25,23 @@ class Island(GameObject):
   # return surface obj with said colors, and topology 2d array
   def generate(self):
     print('Generating Terrain ', self.width, self.height)
-    a = .53
-    b = .92
-    c = 0.98
-    waterHeight = 0.3
-    self.topology = [[0] * self.height] * self.width
+    a = 0.78
+    b = 1.4
+    c = 1.25
+    self.topology = [[0 for i in range(self.height)] for j in range(self.width)]
     sfc = Surface((self.width, self.height))
     pa = PixelArray(sfc)
     for x in range(len(self.topology)):
       for y in range(len(self.topology[0])):
         self.topology[x][y] = self.noise(x, y)
         self.topology[x][y] += self.islandify(x, y, a, b, c)
-        pa[x, y] = self.height_to_color(x, y)
+        pa[x][y] = self.height_to_color(self.topology[x][y])
     print('Finished Proc Gen')
     return pa.make_surface()
 
   def islandify(self, x, y, a, b, c):
     d = numpy.clip(2 * (math.hypot(self.center[0] - x, self.center[1] - y) / self.center[0]), 0, 1)
     return (a - (b * d**c))
-
-  def pixel_array(self):
-    sfc = Surface((self.width, self.height))
-    pa = PixelArray(sfc)
-    for x in range(len(self.topology)):
-      for y in range(len(self.topology[0])):
-        pa[x][y] = self.height_to_color(x, y)
-    return pa.make_surface()
 
   def noise(self, x, y):
     r = 0.0
@@ -68,11 +59,10 @@ class Island(GameObject):
     noise = snoise2(newx, newy)
     return numpy.clip(noise, 0, 1)
 
-  def height_to_color(self, x: int, y: int):
-    h = self.topology[x][y]
-    if(h < 0.3):
+  def height_to_color(self, height):
+    if(height < 0.05):
       return Island.colors['blue']
-    elif(h < 0.5):
+    elif(height < 0.3):
       return Island.colors['sand']
     else:
       return Island.colors['green']

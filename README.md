@@ -1,4 +1,3 @@
-# PiCritters
+# PyCritters
 
-Whatch these little duders run around
-
+Whatch these little duders have kids and die

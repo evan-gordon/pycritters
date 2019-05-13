@@ -3,13 +3,15 @@ from wander_ai import WanderAI, WaitAI
 class Character(pygame.sprite.Sprite):
   def __init__(self, image_info, birthday, x=0, y=0):
     pygame.sprite.Sprite.__init__(self)
-    img, rect = image_info
+    self.ismale, image = image_info
+    img, rect = image
     self.texture, rect = img.copy(), rect.copy()
     rect.height = rect.height / 3
     rect.width = rect.width / 4
     self.birthday = birthday
+    self.nextchild = birthday + 1
     self.lifespan = 5 # days
-    self.state = WaitAI()#WanderAI()
+    self.state = WanderAI()
     self.x = x - rect.width / 2
     self.y = y - rect.height / 2
     self.texture.set_colorkey((0, 0, 0))
@@ -28,11 +30,21 @@ class Character(pygame.sprite.Sprite):
     if(not self.validlocation(topology)):
       self.kill()
 
-# could i have x and y swapped for location?
+  def collide(self, collisions, currDay):
+    if(not self.ismale):
+      for other in collisions:
+        if(other.ismale):
+          return self.tryhavechild(currDay)
+
+  def tryhavechild(self, currDay):
+    if(currDay >= self.nextchild):
+      self.nextchild += 3
+      return True
+
   def validlocation(self, topology):
     if(self.rect.centerx < 0 or self.rect.centery < 0 or 
           self.rect.centerx >= len(topology) or self.rect.centery  >= len(topology[0])):
       return False
-    if(topology[int(self.rect.centerx)][int(self.rect.centery)] < 0.3):
+    if(topology[int(self.rect.centerx)][int(self.rect.centery)] < 0.3 - .03):# height less than water, with some give
       return False
     return True
