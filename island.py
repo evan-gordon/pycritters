@@ -24,7 +24,7 @@ class Island(GameObject):
   # blue for water, tan for sand, and green for land
   # return surface obj with said colors, and topology 2d array
   def generate(self):
-    print('Generating Terrain ', self.width, self.height)
+    print(f'Generating Terrain {self.width}x{self.height}')
     a = 0.78
     b = 1.4
     c = 1.25

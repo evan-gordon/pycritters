@@ -1,21 +1,18 @@
 import pygame
 from wander_ai import WanderAI, WaitAI
+
 class Character(pygame.sprite.Sprite):
   def __init__(self, image_info, birthday, x=0, y=0):
     pygame.sprite.Sprite.__init__(self)
     self.ismale, image = image_info
     img, rect = image
     self.texture, rect = img.copy(), rect.copy()
-    rect.height = rect.height / 3
-    rect.width = rect.width / 4
-    self.birthday = birthday
-    self.nextchild = birthday + 1
+    self.texture.set_colorkey((0, 0, 0))
+    rect.height, rect.width = rect.height / 3, rect.width / 4
+    self.birthday, self.nextchild = birthday, birthday + 1
     self.lifespan = 5 # days
     self.state = WanderAI()
-    self.x = x - rect.width / 2
-    self.y = y - rect.height / 2
-    self.texture.set_colorkey((0, 0, 0))
-    
+    self.x, self.y = x - rect.width / 2, y - rect.height / 2
     self.rect = pygame.Rect(0, 0, rect.width, rect.height)
     self.rect.center = (self.rect.width / 2,  self.rect.height / 2 )
     self.image = self.texture.subsurface(self.rect)
@@ -25,8 +22,7 @@ class Character(pygame.sprite.Sprite):
       self.kill()
       return
     self.state = self.state.update(self)
-    self.rect.x = self.x
-    self.rect.y = self.y
+    self.rect.x, self.rect.y = self.x, self.y
     if(not self.validlocation(topology)):
       self.kill()
 
@@ -35,6 +31,12 @@ class Character(pygame.sprite.Sprite):
       for other in collisions:
         if(other.ismale):
           return self.tryhavechild(currDay)
+
+  def collideplants(self, plants, currDay):
+    for plant in plants:
+      if(plant.eat(currDay)):
+        # increase motabolism
+        return
 
   def tryhavechild(self, currDay):
     if(currDay >= self.nextchild):

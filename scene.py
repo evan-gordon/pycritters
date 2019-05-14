@@ -1,6 +1,7 @@
 import os, sys, pygame, random
 from island import Island
 from character import Character
+from bush import Bush
 
 # load image and return or close on fail to load
 def load_image(name, colorkey=None):
@@ -17,32 +18,31 @@ def load_image(name, colorkey=None):
         image.set_colorkey(colorkey, RLEACCEL)
     return image, image.get_rect()
 
-def make_text(str, font):
-  textSurface = font.render(str, True, (0, 0, 0))
-  return textSurface, textSurface.get_rect()
-
 class Scene:
   def __init__(self, width, height):
     pygame.init()
     pygame.display.set_caption('PiCritters')
     self.colors = {'black': (0, 0, 0), 'green': (0, 245, 0)}
     self.font = pygame.font.SysFont("comicsansms", 24)
-    self.width = width
-    self.height = height
+    self.width, self.height = width, height
     self.screen = pygame.display.set_mode((width, height))
-    self.initial_pop = 50
-    self.day = 1
+    self.day, self.initial_pop, self.bush_pop = 1, 25, 15
     self.bg = Island(width, height)
     self.clock = pygame.time.Clock()
-    self.textures = [(False, load_image('F_01.png')), (True, load_image('M_01.png'))]
+    self.food_texture = load_image('food.png')
+    self.char_textures = [(False, load_image('F_01.png')), (True, load_image('M_01.png'))]
     self.sprites = pygame.sprite.Group()
+    self.plants = pygame.sprite.Group()
     for i in range(self.initial_pop):
       x, y = self.random_position()
       self.spawn_critter(x, y)
+    for i in range(self.bush_pop):
+      x, y = self.random_position()
+      self.plants.add(Bush(self.food_texture, self.day, x, y))
     pygame.time.set_timer(pygame.USEREVENT+1, 5000)
 
   def spawn_critter(self, x, y):
-    image = self.textures[random.randint(0, len(self.textures) - 1)]
+    image = self.char_textures[random.randint(0, len(self.char_textures) - 1)]
     self.sprites.add(Character(image, self.day, x, y))
 
   def random_position(self):
@@ -65,11 +65,14 @@ class Scene:
 
   def handle_collisions(self):
     for character in self.sprites:
-      collided_with = pygame.sprite.spritecollide(character, self.sprites, False)
-      if(collided_with):
-        hadchild = character.collide(collided_with, self.day)
+      collided_chars = pygame.sprite.spritecollide(character, self.sprites, False)
+      if(collided_chars):
+        hadchild = character.collide(collided_chars, self.day)
         if(hadchild):
           self.spawn_critter(character.x, character.y)
+      collided_plants = pygame.sprite.spritecollide(character, self.plants, False)
+      if(collided_plants):
+        character.collideplants(collided_plants, self.day)
 
   def loop(self):
     while 1:
@@ -78,8 +81,10 @@ class Scene:
 
       self.screen.blit(self.bg.img, self.bg.pos)  # draw background
       self.sprites.update(self.day, self.bg.topology)# update stuff
+      self.plants.update(self.day)
       self.handle_collisions()
       self.sprites.draw(self.screen)              # draw stuff
+      self.plants.draw(self.screen)
       self.render_ui()
       pygame.display.flip()
   
