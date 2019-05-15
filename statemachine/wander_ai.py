@@ -1,6 +1,6 @@
 import random, math
 from oven_timer import OvenTimer
-from state_machine import StateMachine
+from statemachine.state_machine import StateMachine
 
 class WanderAI(StateMachine):
   def __init__(self):

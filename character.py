@@ -1,5 +1,5 @@
 import pygame
-from wander_ai import WanderAI, WaitAI
+from statemachine.wander_ai import WanderAI, WaitAI
 
 class Character(pygame.sprite.Sprite):
   def __init__(self, image_info, birthday, x=0, y=0):

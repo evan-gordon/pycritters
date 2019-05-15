@@ -1,16 +1,10 @@
 import random, math, numpy
 from noise import snoise2
-from pygame import PixelArray, Surface
+from pygame import PixelArray, Surface, Color
 from gameobj import GameObject
 
 # https://www.pygame.org/docs/ref/pixelarray.html
 class Island(GameObject):
-  colors = {
-        'green': (0, 245, 0),
-        'blue': (0, 0, 245),
-        'sand': (242, 215, 196)
-      }
-
   def __init__(self, width, height):
     self.width = width
     self.height = height
@@ -61,8 +55,8 @@ class Island(GameObject):
 
   def height_to_color(self, height):
     if(height < 0.05):
-      return Island.colors['blue']
+      return Color('blue')
     elif(height < 0.3):
-      return Island.colors['sand']
+      return Color('khaki')
     else:
-      return Island.colors['green']
+      return Color('green')
