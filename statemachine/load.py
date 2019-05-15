@@ -1,7 +1,6 @@
 import os, sys, pygame, random, pygame_helpers#, config
 from island import Island
 from bush import Bush
-from gamestate import GameState
 from statemachine.state_machine import StateMachine
 from statemachine.play import Play
 
@@ -20,26 +19,21 @@ def load_image(name, colorkey=None):
   return image, image.get_rect()
 
 class Load(StateMachine):
-  def __init__(self, width, height, population, bush_pop):
-    pygame.init()
-    pygame.display.set_caption('PyCritters')
-    pygame.display.set_mode((width, height))
+  def __init__(self, population, bush_pop):
     self.population = population
     self.bush_pop = bush_pop
     StateMachine.__init__(self)
 
-  def update(self):
-    state = GameState()
+  def update(self, state):
     state.FONT = pygame.font.SysFont("comicsansms", 24)
     state.FOOD_TEXTURE = load_image('food.png')
     state.CHAR_TEXTURES = [(False, load_image('F_01.png')), (True, load_image('M_01.png'))]
     state.screen = pygame.display.get_surface()
-    state.day = 1
-    state.width, state.height = state.screen.get_size()#split work for this into processes
-    state.world = Island(state.width, state.height)
     state.clock = pygame.time.Clock()
-    state.sprites = pygame.sprite.Group()
-    state.plants = pygame.sprite.Group()
+    state.day = 1
+    state.width, state.height = state.screen.get_size()
+    state.world = Island(state.width, state.height)#split work for this into processes
+    state.sprites, state.plants = pygame.sprite.Group(), pygame.sprite.Group()
     for i in range(self.population):
       x, y = pygame_helpers.random_position(state)
       state.sprites.add(pygame_helpers.spawn_critter(state, x, y))
@@ -48,4 +42,4 @@ class Load(StateMachine):
       state.plants.add(Bush(state.FOOD_TEXTURE, state.day, x, y))
     pygame.time.set_timer(pygame.USEREVENT+1, 5000)
     print('finished loading')
-    return Play(state)
+    return Play()

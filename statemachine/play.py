@@ -7,68 +7,62 @@ def render_ui(state):
     state.screen.blit(ui_font, (0, 0))
 
 class Play(StateMachine):
-  def __init__(self, state):
-    self.state = state
+  def __init__(self):
     self.paused = False
     StateMachine.__init__(self)
 
-  def update(self):
+  def update(self, state):
     while(not self.paused):
-      self.state.clock.tick(60)
-      self.handle_events()
+      state.clock.tick(60)
+      self.handle_events(state)
 
-      self.state.screen.blit(self.state.world.img, self.state.world.pos)  # draw background
-      self.state.sprites.update(self.state.day, self.state.world.topology)# update stuff
-      self.state.plants.update(self.state.day)
-      self.handle_collisions()
-      self.state.sprites.draw(self.state.screen)              # draw stuff
-      self.state.plants.draw(self.state.screen)
-      render_ui(self.state)
+      state.screen.blit(state.world.img, state.world.pos)  # draw background
+      state.sprites.update(state.day, state.world.topology)# update stuff
+      state.plants.update(state.day)
+      self.handle_collisions(state)
+      state.sprites.draw(state.screen)              # draw stuff
+      state.plants.draw(state.screen)
+      render_ui(state)
       pygame.display.flip()
-    return Pause(self.state)
+    return Pause()
 
-  def handle_events(self):
+  def handle_events(self, state):
     for event in pygame.event.get():
       if(event.type == pygame.QUIT): sys.exit()
       if(event.type == pygame.USEREVENT+1):
-        self.state.day += 1
+        state.day += 1
       if(event.type == pygame.KEYUP):
         if(event.key == pygame.K_SPACE):
           self.paused = True
-      #   x, y = self.random_position()
-      #   #print(f'Spawning at ({x}, {y}) height: {self.bg.topology[x][y]}')
-      #   if(self.day % 2 == 0):
-      #     self.sprites.add(Character(self.textures['m1'], self.day, x, y))
-      #   if(self.day % 2 != 0):
-      #     self.sprites.add(Character(self.textures['f1'], self.day, x, y))
 
-  def handle_collisions(self):
-    for character in self.state.sprites:
-      collided_chars = pygame.sprite.spritecollide(character, self.state.sprites, False)
+  def handle_collisions(self, state):
+    for character in state.sprites:
+      collided_chars = pygame.sprite.spritecollide(character, state.sprites, False)
       if(collided_chars):
-        hadchild = character.collide(collided_chars, self.state.day)
+        hadchild = character.collide(collided_chars, state.day)
         if(hadchild):
-          pygame_helpers.spawn_critter(self.state, character.x, character.y)
-      collided_plants = pygame.sprite.spritecollide(character, self.state.plants, False)
+          pygame_helpers.spawn_critter(state, character.x, character.y)
+      collided_plants = pygame.sprite.spritecollide(character, state.plants, False)
       if(collided_plants):
-        character.collideplants(collided_plants, self.state.day)
+        character.collideplants(collided_plants, state.day)
 
 
 class Pause(StateMachine):
-  def __init__(self, state):
+  def __init__(self):
     self.paused = True
-    self.state = state
     StateMachine.__init__(self)
 
-  def update(self):
+  def update(self, state):
     while(self.paused):
+      state.clock.tick(60)
       self.handle_events()
-      self.state.screen.blit(self.state.world.img, self.state.world.pos)  # draw background
-      self.state.sprites.draw(self.state.screen)              # draw stuff
-      self.state.plants.draw(self.state.screen)
-      render_ui(self.state)
+
+      state.screen.blit(state.world.img, state.world.pos)  # draw background
+      state.sprites.draw(state.screen)              # draw stuff
+      state.plants.draw(state.screen)
+      render_ui(state)
       pygame.display.flip()
-    return Play(self.state)
+    return Play()
 
   def handle_events(self):
     for event in pygame.event.get():
