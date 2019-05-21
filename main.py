@@ -5,7 +5,7 @@ from statemachine.load import Load
 if __name__ == "__main__":
   pygame.init()
   pygame.display.set_caption('PyCritters')
-  pygame.display.set_mode((500, 320))
+  pygame.display.set_mode((800, 600))
   state = GameState()
   sim = Load(25, 15)
   while(1):

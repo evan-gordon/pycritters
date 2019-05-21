@@ -11,6 +11,7 @@ class Character(pygame.sprite.Sprite):
     rect.height, rect.width = rect.height / 3, rect.width / 4
     self.birthday, self.nextchild = birthday, birthday + 1
     self.lifespan = 5 # days
+    self.speed = .4
     self.state = WanderAI()
     self.x, self.y = x - rect.width / 2, y - rect.height / 2
     self.rect = pygame.Rect(0, 0, rect.width, rect.height)
@@ -25,6 +26,11 @@ class Character(pygame.sprite.Sprite):
     self.rect.x, self.rect.y = self.x, self.y
     if(not self.validlocation(topology)):
       self.kill()
+  
+  def update2(self, outputs):
+    self.x += (outputs[0] * 2 - 1) * self.speed
+    self.y += (outputs[1] * 2 - 1) * self.speed
+    self.rect.x, self.rect.y = self.x, self.y
 
   def collide(self, collisions, currDay):
     if(not self.ismale):

@@ -9,6 +9,7 @@ verify_ssl = true
 pygame = "*"
 numpy = "*"
 noise = "*"
+neat-python = "*"
 
 [requires]
 python_version = "3.7"
