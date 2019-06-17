@@ -8,5 +8,5 @@ if __name__ == "__main__":
   pygame.display.set_mode((800, 600))
   state = GameState()
   sim = Load(25, 15)
-  while(1):
+  while (1):
     sim = sim.update(state)

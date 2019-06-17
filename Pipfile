@@ -10,6 +10,10 @@ pygame = "*"
 numpy = "*"
 noise = "*"
 neat-python = "*"
+graphviz = "*"
+lock = "*"
+flake8 = "*"
+yapf = "*"
 
 [requires]
 python_version = "3.7"

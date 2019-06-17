@@ -1,10 +1,12 @@
-import random, math, numpy
+import random, math
+import numpy as np
 from noise import snoise2
-from pygame import PixelArray, Surface, Color
+from pygame import PixelArray, Surface, surfarray, Color
 from gameobj import GameObject
 
 # https://www.pygame.org/docs/ref/pixelarray.html
 class Island(GameObject):
+
   def __init__(self, width, height):
     self.width = width
     self.height = height
@@ -19,44 +21,54 @@ class Island(GameObject):
   # return surface obj with said colors, and topology 2d array
   def generate(self):
     print(f'Generating Terrain {self.width}x{self.height}')
-    a = 0.78
-    b = 1.4
-    c = 1.25
-    self.topology = [[0 for i in range(self.height)] for j in range(self.width)]
-    sfc = Surface((self.width, self.height))
-    pa = PixelArray(sfc)
+    a, b, c = 0.78, 1.4, 1.25
+    self.topology = np.ndarray((self.width, self.height, 1))
+    pixel_array = np.ndarray(
+        (self.topology.shape[0], self.topology.shape[1], 3)
+    )
+    pixels = Surface((self.topology.shape[0], self.topology.shape[1]))
+
+    # this code needs to be vectorized
     for x in range(len(self.topology)):
       for y in range(len(self.topology[0])):
         self.topology[x][y] = self.noise(x, y)
         self.topology[x][y] += self.islandify(x, y, a, b, c)
-        pa[x][y] = self.height_to_color(self.topology[x][y])
+        pixel_array[x][y] = self.height_to_color(self.topology[x][y])
+
+    surfarray.blit_array(pixels, pixel_array)
     print('Finished Proc Gen')
-    return pa.make_surface()
+    return pixels
 
   def islandify(self, x, y, a, b, c):
-    d = numpy.clip(2 * (math.hypot(self.center[0] - x, self.center[1] - y) / self.center[0]), 0, 1)
+    d = np.clip(
+        2 * (
+            math.hypot(self.center[0] - x, self.center[1] - y) /
+            self.center[0]
+        ), 0, 1
+    )
     return (a - (b * d**c))
 
   def noise(self, x, y):
     r = 0.0
     newnoise = 0.0
     for i in range(self.octaves):
-      newnoise = self.noise_at_point(x, y, self.scale * 2**i) * (1.0 / 2**i)
-      if(i != 0):
+      newnoise = self.noise_at_point(x, y,
+                                     self.scale * 2**i) * (1.0 / 2**i)
+      if (i != 0):
         newnoise = (2 * newnoise) - newnoise
       r += newnoise
-    return numpy.clip(r, 0, 1)
+    return np.clip(r, 0, 1)
 
   def noise_at_point(self, x, y, frequency):
     newx = ((x + self.center[0]) / self.width) * frequency + self.seed[0]
     newy = ((y + self.center[1]) / self.height) * frequency + self.seed[1]
     noise = snoise2(newx, newy)
-    return numpy.clip(noise, 0, 1)
+    return np.clip(noise, 0, 1)
 
   def height_to_color(self, height):
-    if(height < 0.05):
-      return Color('blue')
-    elif(height < 0.3):
-      return Color('khaki')
+    if (height < 0.05):
+      return (0, 0, 128) # Color('blue')
+    elif (height < 0.3):
+      return (240, 230, 140) # Color('khaki')
     else:
-      return Color('green')
+      return (0, 200, 0) # Color('green')

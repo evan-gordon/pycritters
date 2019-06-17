@@ -1,8 +1,10 @@
-import pygame
-from statemachine.wander_ai import WanderAI, WaitAI
+import pygame, math
+from typing import List
+from statemachine.wander_ai import WanderAI
 
 class Character(pygame.sprite.Sprite):
-  def __init__(self, image_info, birthday, x=0, y=0):
+
+  def __init__(self, image_info, birthday: int, x=0, y=0):
     pygame.sprite.Sprite.__init__(self)
     self.ismale, image = image_info
     img, rect = image
@@ -10,49 +12,95 @@ class Character(pygame.sprite.Sprite):
     self.texture.set_colorkey((0, 0, 0))
     rect.height, rect.width = rect.height / 3, rect.width / 4
     self.birthday, self.nextchild = birthday, birthday + 1
-    self.lifespan = 5 # days
+    self.hunger = 0.5
+    self.fruits_eaten = 0
+    self.lifespan = 8 # days
+    self.dead = False
+    self.fitness = 0.0
     self.speed = .4
     self.state = WanderAI()
+    self.looking_angle = 0
     self.x, self.y = x - rect.width / 2, y - rect.height / 2
     self.rect = pygame.Rect(0, 0, rect.width, rect.height)
-    self.rect.center = (self.rect.width / 2,  self.rect.height / 2 )
     self.image = self.texture.subsurface(self.rect)
+    self.rect.x, self.rect.y = self.x, self.y
 
   def update(self, currDay, topology):
-    if(currDay > self.birthday + self.lifespan):
+    if (currDay > self.birthday + self.lifespan):
       self.kill()
       return
     self.state = self.state.update(self)
     self.rect.x, self.rect.y = self.x, self.y
-    if(not self.validlocation(topology)):
+    if (not self.validlocation(topology)):
       self.kill()
-  
-  def update2(self, outputs):
-    self.x += (outputs[0] * 2 - 1) * self.speed
-    self.y += (outputs[1] * 2 - 1) * self.speed
+
+  def update2(self, inputs: List[float], new_day: bool):
+    """
+    Update currently used for training only
+    """
+    if (new_day):
+      self.hunger -= .2
+    outputs = self.brain.activate(inputs)
+    x_input, y_input = (outputs[0] * 2 - 1), (outputs[1] * 2 - 1)
+    self.x += x_input * self.speed
+    self.y += y_input * self.speed
     self.rect.x, self.rect.y = self.x, self.y
+    self.looking_angle = math.degrees(math.atan(x_input / y_input))
+
+  def eval_fitness(self, currDay: int):
+    """
+    Use a ratio of food eaten and length of life to measure success.
+
+    In the future could use stats such as:
+    * number children had
+    """
+    self.fitness = currDay / 10 + .25 * self.fruits_eaten
+
+  def try_kill(self, height_at_current_position: float, currDay: int):
+    """
+    Currently critters can die by:
+    * Drowning
+    * Old age
+    * Hunger OR Overeating
+    """
+    if (height_at_current_position < .05):
+      self.dead = True
+    if (currDay > self.birthday + self.lifespan):
+      self.dead = True
+    if (self.hunger < 0 or 1 < self.hunger):
+      self.dead = True
 
   def collide(self, collisions, currDay):
-    if(not self.ismale):
+    if (not self.ismale):
       for other in collisions:
-        if(other.ismale):
+        if (other.ismale):
           return self.tryhavechild(currDay)
 
   def collideplants(self, plants, currDay):
     for plant in plants:
-      if(plant.eat(currDay)):
-        # increase motabolism
+      if (plant.eat(currDay)):
+        self.hunger += .3
+        self.fruits_eaten += 1
         return
 
-  def tryhavechild(self, currDay):
-    if(currDay >= self.nextchild):
+  def tryhavechild(self, currDay: int):
+    if (currDay >= self.nextchild):
       self.nextchild += 3
       return True
 
+  def getcenterlocation(self):
+    return self.rect.center[0], self.rect.center[1]
+
   def validlocation(self, topology):
-    if(self.rect.centerx < 0 or self.rect.centery < 0 or 
-          self.rect.centerx >= len(topology) or self.rect.centery  >= len(topology[0])):
+    if (
+        self.rect.centerx < 0 or self.rect.centery < 0 or
+        self.rect.centerx >= len(topology) or
+        self.rect.centery >= len(topology[0])
+    ):
       return False
-    if(topology[int(self.rect.centerx)][int(self.rect.centery)] < 0.3 - .03):# height less than water, with some give
+    if (
+        topology[int(self.rect.centerx)][int(self.rect.centery)] <
+        0.3 - .03
+    ): # height less than water, with some give
       return False
     return True
