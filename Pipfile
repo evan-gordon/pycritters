@@ -14,6 +14,8 @@ graphviz = "*"
 lock = "*"
 flake8 = "*"
 yapf = "*"
+pytest = "*"
+pytest-cov = "*"
 
 [requires]
 python_version = "3.7"

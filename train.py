@@ -1,7 +1,8 @@
-import neat, pygame, os, sys
+import math, neat, pygame, os, sys
 import _pickle as pickle
 import pygame_helpers as pgh
-from island import Island
+from typing import List, Tuple
+from island import Island, rgb_to_greyscale
 from gamestate import GameState
 from bush import Bush
 from visualize import draw_net
@@ -48,7 +49,6 @@ def setup():
   STATE.sprites = pygame.sprite.Group()
   STATE.plants = pygame.sprite.Group()
   pygame.time.set_timer(pygame.USEREVENT + 1, 5000)
-  print("finished loading")
 
 def handle_events():
   for event in pygame.event.get():
@@ -67,14 +67,13 @@ def handle_paused_events():
       sys.exit()
     if event.type == pygame.MOUSEBUTTONUP:
       x, y = event.pos
-      for critter in STATE.critters:
-        if critter.rect.collidepoint(x, y):
-          print(
-              "Selected critter: " +
-              f"{critter.x}, {critter.y}, {critter.rect.center}"
-          )
-          STATE.selected_critter = critter
-          break
+      selection = any_collide_with_point(STATE.critters, x, y)
+      if (selection is not None):
+        print(
+            "Selected critter: " + f"center: {selection.rect.center}, " +
+            f"looking_direction: {selection.looking_angle}"
+        )
+        STATE.selected_critter = selection
       else:
         print(f"Cleared selection")
         STATE.selected_critter = None
@@ -128,7 +127,6 @@ def play(config):
   global STATE, MAX_FITNESS, BEST_GENOME
   global SCREENHEIGHT, SCREENWIDTH
   # optionally reset group upon new game
-  view_dist = 5
   critters_still_living = True
   while critters_still_living and not STATE.paused:
     STATE.clock.tick(200)
@@ -137,20 +135,19 @@ def play(config):
 
     critters_still_living = False
     for critter in STATE.critters:
-      if not critter.dead:
+      if not critter.dead: # use continue here instead of not.. haha
         # observe world
         critter_center = critter.getcenterlocation()
+        # change input points to more of a vision cone ray tracing system
+        # i could also work to change to using colors instead of heights.
+        # this would allow for easy `raytracing` in the pixelarray
+        # i characters would fairly easily be able to tell red is a good color
+        # maybe i could assign white to other critters
+        observed_points = observe_world(critter)
         genome_input = (
-            STATE.world.topology[int(critter_center[0] -
-                                     view_dist)][int(critter_center[1])],
-            STATE.world.topology[int(critter_center[0]
-                                    )][int(critter_center[1] - view_dist)],
-            STATE.world.topology[int(critter_center[0] +
-                                     view_dist)][int(critter_center[1])],
-            STATE.world.topology[int(critter_center[0]
-                                    )][int(critter_center[1] + view_dist)],
-            critter.looking_angle / 360,
-            critter.hunger,
+            observed_points[0], observed_points[1], observed_points[2],
+            observed_points[3], observed_points[4],
+            critter.looking_angle / 360, critter.hunger, critter.reproduced
         )
 
         critter.eval_fitness(STATE.day)
@@ -161,15 +158,8 @@ def play(config):
         height = STATE.world.topology[int(critter_center[0]
                                          )][int(critter_center[1] + 2)]
         critter.try_kill(height, STATE.day)
-        # if(height < .05):
-        # 	#print(f'{critter.x}, {critter.y} - width {critter.rect.width}')
-        # 	critter.dead = True
-        # if(STATE.day > critter.birthday + critter.lifespan):
-        # 	critter.dead = True
-        # return(fitness)
         # pipe inputs to character tuple(float) -> list(float)
         critter.update2(genome_input, STATE.new_day)
-        # print(f'updated pos: {critter.x}, {critter.y}')
         if not critter.dead:
           critters_still_living = True
 
@@ -178,6 +168,15 @@ def play(config):
     handle_collisions()
     STATE.plants.draw(STATE.screen)
     STATE.sprites.draw(STATE.screen)
+    # use as optional UI later
+    # for sprite in STATE.sprites:
+    #   center = sprite.getcenterlocation()
+    #   point = vectorize_distance_from_position(
+    #       sprite.looking_angle, 15, center[0], center[1]
+    #   )
+    #   pygame.draw.line(
+    #       STATE.screen, (250, 0, 0), sprite.rect.center, point
+    #   )
     STATE.new_day = False
     render_ui()
     pygame.display.flip()
@@ -199,6 +198,12 @@ def pause(config):
       pygame.draw.rect(
           STATE.screen, (250, 0, 0), STATE.selected_critter.rect.copy(), 2
       )
+      observed_points = view_positions(STATE.selected_critter)
+      for i in range(5):
+        pygame.draw.line(
+            STATE.screen, (250, 0, 0), STATE.selected_critter.rect.center,
+            observed_points[i]
+        )
     render_ui()
     pygame.display.flip()
   STATE.selected_critter = None
@@ -235,13 +240,86 @@ def eval_genomes(genomes, config):
     STATE.critters.append(c)
     STATE.sprites.add(c)
   for (genome_id, genome), critter in zip(genomes, STATE.critters):
-    critter.brain = neat.nn.FeedForwardNetwork.create(genome, config)
+    network = neat.nn.FeedForwardNetwork.create(genome, config)
+    critter.setbrainandgenome(genome_id, genome, network)
   game(genome, config)
   print(f"Gen : {GENERATION} Max Fitness : {MAX_FITNESS}")
   for (gene_id, gene), critter in zip(genomes, STATE.critters):
     gene.fitness = critter.fitness
   STATE.sprites.empty()
   STATE.plants.empty()
+
+def view_positions(critter, view_dist=15) -> List[Tuple]:
+  """
+  Given a critter at a certain location
+  return a list of points where it is looking
+  """
+  global STATE
+  starting_angle = critter.looking_angle - 45.0
+  critter_center = critter.getcenterlocation()
+  observed_points = []
+  for _ in range(5):
+    point = vectorize_distance_from_position(
+        starting_angle, view_dist, critter_center[0], critter_center[1]
+    )
+    observed_points.append(point)
+    starting_angle += 22.5
+  return observed_points
+
+def observe_world(critter, view_dist=15) -> List[float]:
+  """
+  Given a critter at a certain location
+  calculate points in a view cone.
+  Map those points onto the `world` map
+  and get colors at those points.
+  If that point intersects with a critter
+  or a plant (apple) then change color
+  accordingly.
+  """
+  global STATE
+  starting_angle = critter.looking_angle - 45.0
+  critter_center = critter.getcenterlocation()
+  observed_points = []
+
+  for _ in range(5):
+    (observed_x, observed_y) = vectorize_distance_from_position(
+        starting_angle, view_dist, critter_center[0], critter_center[1]
+    )
+    if (
+        any_collide_with_point(STATE.plants, observed_x, observed_y) is
+        not None
+    ):
+      greyscale = rgb_to_greyscale((250, 0, 0))
+    elif (
+        any_collide_with_point(STATE.critters, observed_x, observed_y) is
+        not None
+    ):
+      greyscale = rgb_to_greyscale((255, 255, 255))
+    else:
+      greyscale = STATE.world.get_greyscale_at(observed_x, observed_y)
+
+    observed_points.append(greyscale)
+    starting_angle += 22.5
+  return observed_points
+
+def any_collide_with_point(group, x, y):
+  for obj in group:
+    if obj.rect.collidepoint(x, y):
+      return obj
+  else:
+    return None
+
+def vectorize_distance_from_position(angle_deg, hyp, originx, originy):
+  """
+  Given an angle and a magnitude map that vector to a x,y coord
+
+  x axis needs output flipped due to cos of 0 or up being positive
+  """
+  angle_rads = math.radians(angle_deg)
+  return (
+      int(math.cos(angle_rads) * hyp + originx + 0.5),
+      int((-1 * math.sin(angle_rads) * hyp) + originy + 0.5)
+  )
 
 if __name__ == "__main__":
   config = neat.Config(
@@ -254,6 +332,7 @@ if __name__ == "__main__":
 
   init_pygame()
   setup()
+  print("finished loading")
   pop = neat.Population(config) # create population obj
   winner = pop.run(eval_genomes, 20)
   print(winner)

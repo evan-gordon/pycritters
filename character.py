@@ -14,13 +14,15 @@ class Character(pygame.sprite.Sprite):
     self.birthday, self.nextchild = birthday, birthday + 1
     self.hunger = 0.5
     self.fruits_eaten = 0
+    self.reproduced = 0.0
     self.lifespan = 8 # days
     self.dead = False
     self.fitness = 0.0
     self.speed = .4
     self.state = WanderAI()
-    self.looking_angle = 0
-    self.x, self.y = x - rect.width / 2, y - rect.height / 2
+    self.looking_angle = 0.0
+    self.x, self.y = x - int(rect.width / 2 +
+                             0.5), int(y - rect.height / 2 + 0.5)
     self.rect = pygame.Rect(0, 0, rect.width, rect.height)
     self.image = self.texture.subsurface(self.rect)
     self.rect.x, self.rect.y = self.x, self.y
@@ -37,15 +39,21 @@ class Character(pygame.sprite.Sprite):
   def update2(self, inputs: List[float], new_day: bool):
     """
     Update currently used for training only
+
+    Pipe inputs into genomes.
+    Use outputs to move player and update state.
     """
     if (new_day):
       self.hunger -= .2
     outputs = self.brain.activate(inputs)
-    x_input, y_input = (outputs[0] * 2 - 1), (outputs[1] * 2 - 1)
+    x_input, y_input = (outputs[0] * 2.0 - 1.0), (outputs[1] * 2.0 - 1.0)
     self.x += x_input * self.speed
     self.y += y_input * self.speed
     self.rect.x, self.rect.y = self.x, self.y
-    self.looking_angle = math.degrees(math.atan(x_input / y_input))
+    self.looking_angle = math.degrees(math.atan2(y_input, x_input))
+    if (self.looking_angle < 0):
+      self.looking_angle += 360.0
+    self.reproduced = 0.0 # could slowly reduce later..
 
   def eval_fitness(self, currDay: int):
     """
@@ -86,7 +94,13 @@ class Character(pygame.sprite.Sprite):
   def tryhavechild(self, currDay: int):
     if (currDay >= self.nextchild):
       self.nextchild += 3
+      self.reproduced = 1.0
       return True
+
+  def setbrainandgenome(self, gid: int, genome, network):
+    self.gid = gid
+    self.genome = genome
+    self.brain = network
 
   def getcenterlocation(self):
     return self.rect.center[0], self.rect.center[1]
