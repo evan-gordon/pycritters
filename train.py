@@ -6,6 +6,8 @@ from island import Island, rgb_to_greyscale
 from gamestate import GameState
 from bush import Bush
 from visualize import draw_net
+from gui_manager import GUIManager
+import factory
 
 FPS = 200
 OUTPUT_WINNER_TO_FILE = True # False
@@ -48,6 +50,12 @@ def setup():
   STATE.world = Island(STATE.width, STATE.height)
   STATE.sprites = pygame.sprite.Group()
   STATE.plants = pygame.sprite.Group()
+  STATE.GUIMANAGER = GUIManager()
+  (id, cbox) = factory.create_ui(
+      "checkbox", manager=STATE.GUIMANAGER, id="show_directions", y=16
+  )
+  print(id)
+  print(str(cbox))
   pygame.time.set_timer(pygame.USEREVENT + 1, 5000)
 
 def handle_events():
@@ -62,7 +70,9 @@ def handle_events():
         STATE.paused = True
 
 def handle_paused_events():
-  for event in pygame.event.get():
+  global STATE
+  events = pygame.event.get()
+  for event in events:
     if event.type == pygame.QUIT:
       sys.exit()
     if event.type == pygame.MOUSEBUTTONUP:
@@ -80,6 +90,7 @@ def handle_paused_events():
     if event.type == pygame.KEYUP:
       if event.key == pygame.K_SPACE:
         STATE.paused = False
+  STATE.GUIMANAGER.update(events)
 
 def handle_collisions():
   global STATE
@@ -168,15 +179,8 @@ def play(config):
     handle_collisions()
     STATE.plants.draw(STATE.screen)
     STATE.sprites.draw(STATE.screen)
-    # use as optional UI later
-    # for sprite in STATE.sprites:
-    #   center = sprite.getcenterlocation()
-    #   point = vectorize_distance_from_position(
-    #       sprite.looking_angle, 15, center[0], center[1]
-    #   )
-    #   pygame.draw.line(
-    #       STATE.screen, (250, 0, 0), sprite.rect.center, point
-    #   )
+    draw_sprite_directions()
+
     STATE.new_day = False
     render_ui()
     pygame.display.flip()
@@ -204,7 +208,9 @@ def pause(config):
             STATE.screen, (250, 0, 0), STATE.selected_critter.rect.center,
             observed_points[i]
         )
+    draw_sprite_directions()
     render_ui()
+    STATE.GUIMANAGER.draw(STATE.screen)
     pygame.display.flip()
   STATE.selected_critter = None
   return "play"
@@ -248,6 +254,18 @@ def eval_genomes(genomes, config):
     gene.fitness = critter.fitness
   STATE.sprites.empty()
   STATE.plants.empty()
+
+def draw_sprite_directions():
+  global STATE
+  if (STATE.GUIMANAGER.get_widget("show_directions").enabled):
+    for sprite in STATE.sprites:
+      center = sprite.getcenterlocation()
+      point = vectorize_distance_from_position(
+          sprite.looking_angle, 15, center[0], center[1]
+      )
+      pygame.draw.line(
+          STATE.screen, (250, 0, 0), sprite.rect.center, point
+      )
 
 def view_positions(critter, view_dist=15) -> List[Tuple]:
   """

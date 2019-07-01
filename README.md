@@ -5,11 +5,10 @@ Watch these little duders have kids and die!
 ## Planned Features
 
 * Use NEAT-python reproduction interface to spawn critters
-* Add metabolism ~~and hunger~~ to critters
 * Update fitness function
 * Option to see in color
 * Click on critter and display neural structure
-* UI Toggle for seeing facing direction
+* group UI elements in moveable window
 * Ability to kill from paused menu
 
 ## Environment

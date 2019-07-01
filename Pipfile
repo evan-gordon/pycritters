@@ -16,6 +16,7 @@ flake8 = "*"
 yapf = "*"
 pytest = "*"
 pytest-cov = "*"
+pyggui = {editable = true,git = "https://github.com/evan-gordon/pyggui.git",ref = "master"}
 
 [requires]
 python_version = "3.7"
