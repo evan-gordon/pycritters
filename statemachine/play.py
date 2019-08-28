@@ -1,4 +1,5 @@
 import pygame, pygame_helpers, sys
+import reproduction
 from statemachine.state_machine import StateMachine
 
 def render_ui(state):
@@ -18,11 +19,27 @@ class Play(StateMachine):
   def update(self, state):
     while (not self.paused):
       state.clock.tick(60)
+      state.screen.blit(state.world.img, state.world.pos) # draw background
       self.handle_events(state)
 
-      state.screen.blit(state.world.img, state.world.pos) # draw background
-      state.sprites.update(state.day, state.world.topology) # update stuff
+      for critter in state.sprites:
+        critter_center = critter.getcenterlocation()
+        curr_height = state.world.topology[int(
+            critter_center[0]
+        )][int(critter_center[1] + 2)]
+        observed_points = state.world.observe_world(state, critter)
+        genome_input = (
+            observed_points[0], observed_points[1], observed_points[2],
+            observed_points[3], observed_points[4],
+            critter.looking_angle / 360, critter.hunger, critter.reproduced
+        )
+
+        if (critter.try_kill(curr_height, state.day)):
+          state.sprites.remove(critter)
+        else:
+          critter.update(genome_input, state.new_day)
       state.plants.update(state.day)
+      state.new_day = False
       self.handle_collisions(state)
       state.sprites.draw(state.screen) # draw stuff
       state.plants.draw(state.screen)
@@ -36,6 +53,7 @@ class Play(StateMachine):
         sys.exit()
       if (event.type == pygame.USEREVENT + 1):
         state.day += 1
+        state.new_day = True
       if (event.type == pygame.KEYUP):
         if (event.key == pygame.K_SPACE):
           self.paused = True
@@ -46,9 +64,23 @@ class Play(StateMachine):
           character, state.sprites, False
       )
       if (collided_chars):
-        hadchild = character.collide(collided_chars, state.day)
+        (repro_partner,
+         hadchild) = character.collide(collided_chars, state.day)
         if (hadchild):
-          pygame_helpers.spawn_critter(state, character.x, character.y)
+          character.eval_fitness(state.day)
+          repro_partner.eval_fitness(state.day)
+          new_child = pygame_helpers.spawn_critter(
+              state, character.x, character.y
+          )
+
+          (genome, network) = reproduction.reproduce(
+              state.NEAT_CONFIG, state.GID_INDEX, character.genome,
+              repro_partner.genome
+          )
+
+          new_child.setbrainandgenome(state.GID_INDEX, genome, network)
+          state.GID_INDEX += 1
+
       collided_plants = pygame.sprite.spritecollide(
           character, state.plants, False
       )
