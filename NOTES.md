@@ -48,8 +48,16 @@ I have not yet added distance to the inputs for these critters, but they will ne
 
 For the past two phases i still see similar behaviors (using unconnected at start networks). First they learn its useful to move. They then learn moving in a circle brings better chances of running into food. Sometimes the will then learn to move in a larger circle, but they always get stuck at this point in the process. After adding distances i could start them with more nodes in their brain and more connections to increase the probability of them learning to move towards food.
 
+## After Dynamic food placement
+
+Apparently the cause for most of the previous issues was due to the static placement of 
+food. With dynamic placement critters became quickly able to determine moving towards food to be a desirable trait. 
+
+Also with these changes i reduced the distance critters could see (mostly for performance reasons) but this seemed to also reduce unnessisary inputs to the critters.
+
+Perhaps in the future when i try out Genes i could try having distance they can see be a gene that is evolved.
+
 ## Todo
 
-* update apples every frame so getting eaten is more apparent.
 * metabolism - hunger is increased by ammount of distance traveled instead of only by time.
 * after perfecting the current stage, build out stage 2 (islands) and 3 (reproduction).

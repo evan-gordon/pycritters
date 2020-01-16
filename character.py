@@ -74,7 +74,7 @@ class Character(pygame.sprite.Sprite):
     * Hunger OR Overeating
     """
     if (
-        self.mode == WorldType.SURVIVAL and
+        # self.mode == WorldType.SURVIVAL and
         height_at_current_position < .05
     ):
       self.dead = True

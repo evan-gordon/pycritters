@@ -43,6 +43,8 @@ class Bush(pygame.sprite.Sprite):
       return False
     self.nextgrowth = currDay + 1
     self.ripeness = 0.1
+    self.set_ripeness()
+    self.kill()
     return True
 
   def collide(self, collision, currDay):

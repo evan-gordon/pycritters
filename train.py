@@ -14,7 +14,8 @@ FPS = 200
 OUTPUT_WINNER_TO_FILE = False
 # try later: 640×480, 800×600, 960×720, 1024×768, 1280×960
 SCREENWIDTH, SCREENHEIGHT = 960, 720
-BUSH_POP = 15
+NUM_GENERATIONS = 50
+BUSH_POP = 150
 SCORE = 0
 GENERATION = 0
 MAX_FITNESS = 0
@@ -191,14 +192,15 @@ def play(config):
 
         if (not critter.try_kill(curr_height, STATE.day)):
           critter.update(genome_input, STATE.new_day)
-          updated_center = critter.getcenterlocation()
-          if(
-              STATE.mode != WorldType.SURVIVAL and
-              STATE.world.topology[int(updated_center[0]
-              )][int(updated_center[1] + 2)] < 0.05
-          ):
-            x, y = back_to_land(updated_center)
-            critter.teleport(x, y)
+          # updated_center = critter.getcenterlocation()
+          # try removing this
+          # if(
+          #     STATE.mode != WorldType.SURVIVAL and
+          #     STATE.world.topology[int(updated_center[0]
+          #     )][int(updated_center[1] + 2)] < 0.05
+          # ):
+          #   x, y = back_to_land(updated_center)
+          #   critter.teleport(x, y)
           critters_still_living = True
         else:
           STATE.critters.remove(critter)
@@ -206,6 +208,10 @@ def play(config):
 
     # update world
     STATE.plants.update(STATE.day)
+    food_deficit = BUSH_POP - len(STATE.plants)
+    for _ in range(food_deficit):
+      x, y = pgh.random_position(STATE)
+      STATE.plants.add(Bush(STATE.FOOD_TEXTURE, STATE.day, x, y))
     handle_collisions()
     STATE.plants.draw(STATE.screen)
     STATE.sprites.draw(STATE.screen)
@@ -250,9 +256,11 @@ def pause(config):
 
 def render_ui():
   ui_info = (
-      f"{round(STATE.clock.get_fps())}fps " +
-      f"Generation: {GENERATION} " + f"Max Fitness: {MAX_FITNESS}" +
-      f"Day: {STATE.day} " + f"Population: {len(STATE.sprites)}"
+      f"{round(STATE.clock.get_fps())}fps "
+      f"Generation: {GENERATION} / {NUM_GENERATIONS} "
+      f"Max Fitness: {MAX_FITNESS} "
+      f"Day: {STATE.day} "
+      f"Population: {len(STATE.sprites)} "
   )
   ui_font = STATE.FONT.render(ui_info, True, (0, 0, 0))
   STATE.screen.blit(ui_font, (0, 0))
@@ -295,7 +303,7 @@ def draw_sprite_directions(group):
   for sprite in group:
     center = sprite.getcenterlocation()
     point = vectorize_distance_from_position(
-        sprite.looking_angle, 15, center[0], center[1]
+        sprite.looking_angle, 40, center[0], center[1]
     )
     draw_line(center, point)
 
@@ -352,7 +360,7 @@ def observe_world(critter, view_dist=15) -> List[Tuple]:
 
   for _ in range(5):
     ray = visibility.ray_cast(
-        critter, starting_angle, int(STATE.width / 2.0),
+        critter, starting_angle, 40, # int(STATE.width / 2.0),
         STATE.critters,
         STATE.plants,
         STATE.world
@@ -406,7 +414,6 @@ if __name__ == "__main__":
   STATE.mode = WorldType.FOOD # member
   print(f'Setting mode to: {STATE.mode}')
   STATE.world = Island(STATE.width, STATE.height, type=STATE.mode)
-  BUSH_POP = 40
   config = neat.Config(
       neat.DefaultGenome, # current_best,
       neat.DefaultReproduction,
@@ -415,7 +422,7 @@ if __name__ == "__main__":
       "config",
   )
   pop = neat.Population(config) # create population obj
-  winner = pop.run(eval_genomes, 75)
+  winner = pop.run(eval_genomes, NUM_GENERATIONS)
   BUSH_POP = 20
   print(config.genome_type)
   # if similar change set genome type to winner

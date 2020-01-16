@@ -10,6 +10,9 @@ Watch these little duders have kids and die!
 * Click on critter and display neural structure
 * group UI elements in moveable window
 * Ability to kill from paused menu
+* during training spawn critters away from food
+* allow critters to `see` backwards
+* genes, (speed, distance can see)
 
 ## Environment
 
